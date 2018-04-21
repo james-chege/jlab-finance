@@ -10,6 +10,7 @@
      */
 
     require_once("constants.php");
+    require_once("simple_html_dom.php");
 
     /**
      * Apologizes to user with message.
@@ -52,52 +53,71 @@
     /**
      * Returns a stock by symbol (case-insensitively) else false if not found.
      */
-    function lookup($symbol)
-    {
-        // reject symbols that start with ^
-        if (preg_match("/^\^/", $symbol))
-        {
-            return false;
-        }
+function lookup($symbol)
+{
+// reject symbols that start with ^
+   if (preg_match("/^\^/", $symbol))
+   {
+       return false;
+   }
+// reject symbols that contain commas
+   if (preg_match("/,/", $symbol))
+   {
+       return false;
+   }
+   // body of price history search
+$sym = $symbol;
+   $yahooURL='https://finance.yahoo.com/quote/'.$sym.'/history?p='.$sym;
 
-        // reject symbols that contain commas
-        if (preg_match("/,/", $symbol))
-        {
-            return false;
-        }
+// get stock name
+$data = file_get_contents($yahooURL);
+    $title = preg_match('/<title[^>]*>(.*?)<\/title>/ims', $data, $matches) ? $matches[1] : null;
 
-        // open connection to Yahoo
-        $handle = @fopen("http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s=$symbol", "r");
-        if ($handle === false)
-        {
-            // trigger (big, orange) error
-            trigger_error("Could not connect to Yahoo!", E_USER_ERROR);
-            exit;
-        }
+$title = preg_replace('/[[a-zA-Z0-9\. \| ]* \| /','',$title);
+$title = preg_replace('/ Stock \- Yahoo Finance/','',$title);
+$name = $title;
 
-        // download first line of CSV file
-        $data = fgetcsv($handle);
-        if ($data === false || count($data) == 1)
-        {
-            return false;
-        }
+// get price data - use simple_html_dom.php (added to /include)
+$body=file_get_html($yahooURL);
+$tables = $body->find('table');
+if ($tables === false || count($tables == 1)){
+    return false;
+}
 
-        // close connection to Yahoo
-        fclose($handle);
 
-        // ensure symbol was found
-        if ($data[2] === "0.00")
-        {
-            return false;
-        }
-
-        // return stock as an associative array
-        return [
-            "symbol" => $data[0],
-            "name" => $data[1],
-            "price" => $data[2],
-        ];
-    }
+$dom = new DOMDocument();
+$elements[] = null;
+$dom->loadHtml($tables[1]); 
+$x = new DOMXpath($dom);
+$i = 0;
+foreach($x->query('//td') as $td){
+        $elements[$i] = $td -> textContent." ";
+    $i++;
+}
+if ($elements === false || count($elements) == 1){
+    return false;
+}
+$open = floatval($elements[1]);
+$high = floatval($elements[2]);
+$low = floatval($elements[3]);
+$close = floatval($elements[5]);
+$vol = str_replace( ',', '', $elements[6]);
+$vol = floatval($vol);
+$date = date('Y-m-d');
+$datestamp = strtotime($date);
+$date = date('Y-m-d',$datestamp);
+   // return stock as an associative array
+   return [
+        "symbol" => $symbol,
+        "name" => $name,
+        "price" => $close,
+        "open" => $open,
+        "high" => $high,
+        "low" => $low,
+        "vol" => $vol,
+        "date" => $date
+   ];
+}
 
     /**
      * Executes SQL statement, possibly with parameters, returning
