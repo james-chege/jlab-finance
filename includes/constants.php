@@ -13,12 +13,12 @@
     define("DATABASE", "id202225_pset7");
 
     // your database's password
-    define("PASSWORD", "somesecurepasword");
+    define("PASSWORD", "2grateful");
 
     // your database's server
     define("SERVER", "localhost");
 
     // your database's username
-    define("USERNAME", "your username");
+    define("USERNAME", "root");
 
 ?>

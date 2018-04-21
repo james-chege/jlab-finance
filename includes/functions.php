@@ -80,7 +80,7 @@ $name = $title;
 // get price data - use simple_html_dom.php (added to /include)
 $body=file_get_html($yahooURL);
 $tables = $body->find('table');
-if ($tables === false || count($tables == 1)){
+if ($tables === false ){
     return false;
 }
 
@@ -94,9 +94,7 @@ foreach($x->query('//td') as $td){
         $elements[$i] = $td -> textContent." ";
     $i++;
 }
-if ($elements === false || count($elements) == 1){
-    return false;
-}
+
 $open = floatval($elements[1]);
 $high = floatval($elements[2]);
 $low = floatval($elements[3]);
